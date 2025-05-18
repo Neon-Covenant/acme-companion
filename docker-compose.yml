@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  nginx-proxy:
+    image: jwilder/nginx-proxy
+    container_name: nginx-proxy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/tmp/docker.sock:ro
+      - ./nginx/certs:/etc/nginx/certs
+      - ./nginx/vhost.d:/etc/nginx/vhost.d
+      - ./nginx/html:/usr/share/nginx/html
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    restart: unless-stopped
+
+  acme-companion:
+    image: nginxproxy/acme-companion
+    container_name: acme-companion
+    depends_on:
+      - nginx-proxy
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./nginx/certs:/etc/nginx/certs
+      - ./nginx/vhost.d:/etc/nginx/vhost.d
+      - ./nginx/html:/usr/share/nginx/html
+    environment:
+      - DEFAULT_EMAIL=jesseoftheveils@gmail.com
+    restart: unless-stopped
+
+  plex-def:
+    image: lscr.io/linuxserver/plex:latest
+    container_name: plexilicious-def
+    network_mode: bridge
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - VERSION=docker
+      - PLEX_CLAIM=claim-xxxxxx
+      - TZ=America/Chicago
+      - VIRTUAL_HOST=plex.neoncovenant.com
+      - LETSENCRYPT_HOST=plex.neoncovenant.com
+      - LETSENCRYPT_EMAIL=jesseoftheveils@gmail.com
+    volumes:
+      - ./data/plex-def/config:/config
+      - ./data/plex-def/media:/data
+    ports:
+      - 32400:32400
+    restart: unless-stopped
